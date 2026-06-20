@@ -77,6 +77,15 @@ select {
   padding: 7px 9px;
 }
 
+input[type="checkbox"] {
+  width: auto;
+  min-height: auto;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  accent-color: var(--blue);
+}
+
 input:focus,
 select:focus,
 button:focus-visible,
@@ -179,7 +188,8 @@ h2 {
 
 .workspace,
 .ledger-panel,
-.history-panel {
+.history-panel,
+.past-game-panel {
   min-width: 0;
 }
 
@@ -332,7 +342,8 @@ tr:last-child td {
 }
 
 .ledger-row,
-.history-row {
+.history-row,
+.settlement-row {
   display: grid;
   gap: 2px;
   border-bottom: 1px solid var(--line);
@@ -340,8 +351,74 @@ tr:last-child td {
 }
 
 .ledger-row:first-child,
-.history-row:first-child {
+.history-row:first-child,
+.settlement-row:first-child {
   border-top: 1px solid var(--line);
+}
+
+.session-button {
+  width: 100%;
+  min-height: auto;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font-weight: inherit;
+  padding-inline: 0;
+  text-align: left;
+}
+
+.session-button:hover,
+.session-button.selected {
+  background: #f5f5f5;
+  color: inherit;
+}
+
+.past-game-panel {
+  margin-top: 34px;
+  scroll-margin-top: 24px;
+}
+
+.settlement-list {
+  display: grid;
+}
+
+.settlement-row {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 12px;
+  color: inherit;
+  cursor: pointer;
+}
+
+.settlement-player {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.settlement-status {
+  color: var(--muted);
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+
+.settled-indicator {
+  border: 1px solid currentColor;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 1px 6px;
+  white-space: nowrap;
+}
+
+.settled {
+  color: var(--win);
+}
+
+.unsettled {
+  color: var(--loss);
 }
 
 .row-main {
@@ -422,5 +499,13 @@ tr:last-child td {
     align-items: flex-start;
     flex-direction: column;
     gap: 0;
+  }
+
+  .settlement-row {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .settlement-status {
+    grid-column: 2;
   }
 }

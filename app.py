@@ -57,10 +57,15 @@ def init_db() -> None:
             buy_in_total REAL NOT NULL DEFAULT 0,
             cash_out REAL NOT NULL DEFAULT 0,
             profit REAL NOT NULL DEFAULT 0,
+            settled INTEGER NOT NULL DEFAULT 0,
             UNIQUE(game_id, player_id)
         );
         """
     )
+
+    entry_columns = [row[1] for row in db.execute("PRAGMA table_info(game_entries)").fetchall()]
+    if "settled" not in entry_columns:
+        db.execute("ALTER TABLE game_entries ADD COLUMN settled INTEGER NOT NULL DEFAULT 0")
 
     existing_columns = [row[1] for row in db.execute("PRAGMA table_info(games)").fetchall()]
     if "default_buy_in" in existing_columns:
@@ -137,7 +142,7 @@ def game_payload(game_id: int) -> dict | None:
     entries = db.execute(
         """
         SELECT ge.id, ge.game_id, ge.player_id, p.name AS player_name,
-               ge.buy_in_total, ge.cash_out, ge.profit
+               ge.buy_in_total, ge.cash_out, ge.profit, ge.settled
         FROM game_entries ge
         JOIN players p ON p.id = ge.player_id
         WHERE ge.game_id = ?
@@ -147,6 +152,8 @@ def game_payload(game_id: int) -> dict | None:
     ).fetchall()
     payload = row_to_dict(game)
     payload["entries"] = [row_to_dict(entry) for entry in entries]
+    payload["settled_count"] = sum(1 for entry in payload["entries"] if entry["settled"])
+    payload["is_settled"] = bool(payload["entries"]) and payload["settled_count"] == len(payload["entries"])
     return payload
 
 
@@ -199,7 +206,12 @@ def list_games():
                COUNT(ge.id) AS player_count,
                COALESCE(SUM(ge.buy_in_total), 0) AS total_buy_in,
                COALESCE(SUM(ge.cash_out), 0) AS total_cash_out,
-               COALESCE(SUM(ge.profit), 0) AS total_profit
+               COALESCE(SUM(ge.profit), 0) AS total_profit,
+               COALESCE(SUM(ge.settled), 0) AS settled_count,
+               CASE
+                   WHEN COUNT(ge.id) > 0 AND SUM(ge.settled) = COUNT(ge.id) THEN 1
+                   ELSE 0
+               END AS is_settled
         FROM games g
         LEFT JOIN game_entries ge ON ge.game_id = g.id
         GROUP BY g.id
@@ -324,6 +336,32 @@ def update_entry(entry_id: int):
         WHERE id = ?
         """,
         (buy_in_total, cash_out, cash_out - buy_in_total, entry_id),
+    )
+    db.commit()
+    return jsonify(game_payload(entry["game_id"]))
+
+
+@app.patch("/api/entries/<int:entry_id>/settled")
+def update_entry_settled(entry_id: int):
+    data = require_json()
+    db = get_db()
+    entry = db.execute(
+        """
+        SELECT ge.game_id, g.status
+        FROM game_entries ge
+        JOIN games g ON g.id = ge.game_id
+        WHERE ge.id = ?
+        """,
+        (entry_id,),
+    ).fetchone()
+    if entry is None:
+        return jsonify({"error": "Entry not found."}), 404
+    if entry["status"] != "finished":
+        raise ValueError("Only finished game payouts can be marked settled.")
+
+    db.execute(
+        "UPDATE game_entries SET settled = ? WHERE id = ?",
+        (1 if data.get("settled") else 0, entry_id),
     )
     db.commit()
     return jsonify(game_payload(entry["game_id"]))

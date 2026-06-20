@@ -1,7 +1,6 @@
 # bulletLedger
 
-A small web app for tracking home poker games. It keeps a running active game, records buy-ins and cash-outs by player, calculates profit, and rolls finished sessions into a leaderboard-style ledger.
-
+A small web app for tracking home poker games. It keeps a running active game, records buy-ins and cash-outs by player, calculates profit, and saves finished sessions into a running leaderboard.
 ## Setup
 
 
@@ -29,7 +28,7 @@ The schema includes:
 
 - `players`: unique player names
 - `games`: session metadata and status
-- `game_entries`: per-player buy-ins, cash-outs, and profit
+- `game_entries`: per-player buy-ins, cash-outs, profit, and settlement status
 
 Delete `poker_ledger.sqlite3` if you want to reset all local data.
 

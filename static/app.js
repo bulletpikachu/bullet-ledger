@@ -1,5 +1,6 @@
 const state = {
   activeGame: null,
+  selectedGame: null,
   players: [],
   games: [],
   ledger: [],
@@ -19,6 +20,11 @@ const els = {
   balanceNote: document.querySelector("#balanceNote"),
   ledgerRows: document.querySelector("#ledgerRows"),
   historyRows: document.querySelector("#historyRows"),
+  pastGamePanel: document.querySelector("#pastGamePanel"),
+  pastGameTitle: document.querySelector("#pastGameTitle"),
+  pastGameStatus: document.querySelector("#pastGameStatus"),
+  pastGameMeta: document.querySelector("#pastGameMeta"),
+  pastGameEntries: document.querySelector("#pastGameEntries"),
   toast: document.querySelector("#toast"),
 };
 
@@ -89,6 +95,7 @@ function render() {
   renderActiveGame();
   renderLedger();
   renderHistory();
+  renderPastGame();
 }
 
 function renderPlayerSelect() {
@@ -184,8 +191,10 @@ function renderHistory() {
   els.historyRows.innerHTML = finished.length
     ? finished.map((game) => {
         const klass = profitClass(game.total_profit);
+        const selected = state.selectedGame?.id === game.id;
+        const settled = Boolean(game.is_settled);
         return `
-          <article class="history-row">
+          <button class="history-row session-button${selected ? " selected" : ""}" data-game="${game.id}" type="button">
             <div class="row-main">
               <span class="row-name">${escapeHtml(game.title)}</span>
               <span>${game.played_on}</span>
@@ -196,11 +205,55 @@ function renderHistory() {
               <span>IN: ${money(game.total_buy_in)}</span>
               <span>OUT: ${money(game.total_cash_out)}</span>
               <span class="${klass}">DIFF: ${money(game.total_profit)}</span>
+              <span class="settled-indicator ${settled ? "settled" : "unsettled"}">${settled ? "SETTLED" : "NOT SETTLED"}</span>
             </div>
-          </article>
+          </button>
         `;
       }).join("")
     : `<p class="muted">No recorded games.</p>`;
+}
+
+function renderPastGame() {
+  const game = state.selectedGame;
+  els.pastGamePanel.classList.toggle("hidden", !game);
+  if (!game) return;
+
+  const settledCount = game.entries.filter((entry) => entry.settled).length;
+  const settled = Boolean(game.is_settled);
+  els.pastGameTitle.textContent = game.title;
+  els.pastGameStatus.textContent = `(${settledCount}/${game.entries.length}) settled`;
+  els.pastGameStatus.classList.toggle("settled", settled);
+  els.pastGameStatus.classList.toggle("unsettled", !settled);
+  els.pastGameMeta.innerHTML = [
+    `Date ${game.played_on}`,
+    `Blinds ${blindMoney(game.small_blind)}/${blindMoney(game.big_blind)}`,
+    `Stack ${money(game.starting_stack)}`,
+  ]
+    .map((item) => `<span class="meta-chip">${item}</span>`)
+    .join("");
+
+  els.pastGameEntries.innerHTML = game.entries.length
+    ? game.entries.map(renderPastGameEntry).join("")
+    : `<p class="muted">No players were recorded for this session.</p>`;
+}
+
+function renderPastGameEntry(entry) {
+  const klass = profitClass(entry.profit);
+  const settlementLabel = Number(entry.profit) >= 0 ? "Paid out" : "Paid";
+  return `
+    <label class="settlement-row">
+      <input data-settle-entry="${entry.id}" type="checkbox" ${entry.settled ? "checked" : ""}>
+      <span class="settlement-player">
+        <span class="row-name">${escapeHtml(entry.player_name)}</span>
+        <span class="row-stats">
+          <span>In ${money(entry.buy_in_total)}</span>
+          <span>Out ${money(entry.cash_out)}</span>
+          <span class="${klass}">Profit ${money(entry.profit)}</span>
+        </span>
+      </span>
+      <span class="settlement-status">${settlementLabel}</span>
+    </label>
+  `;
 }
 
 function formJson(form) {
@@ -233,6 +286,17 @@ async function refreshAfterGameChange() {
   state.games = games;
   state.ledger = ledger;
   render();
+}
+
+async function selectPastGame(gameId) {
+  const game = await api(`/api/games/${gameId}`);
+  if (game.status !== "finished") {
+    throw new Error("Only finished sessions can be viewed here.");
+  }
+  state.selectedGame = game;
+  renderHistory();
+  renderPastGame();
+  els.pastGamePanel.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 function escapeHtml(value) {
@@ -311,6 +375,32 @@ els.activeEntries.addEventListener("change", async (event) => {
   try {
     await saveEntry(input.dataset.entry);
   } catch (error) {
+    showToast(error.message);
+  }
+});
+
+els.historyRows.addEventListener("click", async (event) => {
+  const button = event.target.closest("button[data-game]");
+  if (!button) return;
+  try {
+    await selectPastGame(button.dataset.game);
+  } catch (error) {
+    showToast(error.message);
+  }
+});
+
+els.pastGameEntries.addEventListener("change", async (event) => {
+  const checkbox = event.target.closest("input[data-settle-entry]");
+  if (!checkbox || !state.selectedGame) return;
+  try {
+    state.selectedGame = await api(`/api/entries/${checkbox.dataset.settleEntry}/settled`, {
+      method: "PATCH",
+      body: JSON.stringify({ settled: checkbox.checked }),
+    });
+    await refreshAfterGameChange();
+    showToast(checkbox.checked ? "Marked settled." : "Marked unsettled.");
+  } catch (error) {
+    checkbox.checked = !checkbox.checked;
     showToast(error.message);
   }
 });

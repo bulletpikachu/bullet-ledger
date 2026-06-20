@@ -266,6 +266,17 @@ label {
   border-block: 1px solid var(--line);
 }
 
+/* Narrow the in/out inputs so there's room for a settled checkbox */
+table input[data-field="buy_in_total"],
+table input[data-field="cash_out"] {
+  width: 96px;
+}
+
+.settle-cell {
+  align-items: center;
+  justify-content: center;
+}
+
 table {
   width: 100%;
   border-collapse: collapse;

@@ -356,8 +356,7 @@ def update_entry_settled(entry_id: int):
     ).fetchone()
     if entry is None:
         return jsonify({"error": "Entry not found."}), 404
-    if entry["status"] != "finished":
-        raise ValueError("Only finished game payouts can be marked settled.")
+    # Allow marking settled for both active and finished games.
 
     db.execute(
         "UPDATE game_entries SET settled = ? WHERE id = ?",

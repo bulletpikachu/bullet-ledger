@@ -31,14 +31,15 @@ const els = {
 function money(value) {
   const amount = Number(value || 0);
   return amount.toLocaleString(undefined, {
-    maximumFractionDigits: 0,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
   });
 }
 
 function blindMoney(value) {
   const amount = Number(value || 0);
   return amount.toLocaleString(undefined, {
-    minimumFractionDigits: Number.isInteger(amount) ? 0 : 2,
+    minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
 }
@@ -129,7 +130,7 @@ function renderActiveGame() {
 
   els.activeEntries.innerHTML = game.entries.length
     ? game.entries.map(renderEntryRow).join("")
-    : `<tr><td colspan="5">No players</td></tr>`;
+    : `<tr><td colspan="6">No players</td></tr>`;
 
   const totals = game.entries.reduce(
     (acc, entry) => {
@@ -150,10 +151,13 @@ function renderEntryRow(entry) {
     <tr>
       <td class="row-name">${escapeHtml(entry.player_name)}</td>
       <td>
-        <input data-entry="${entry.id}" data-field="buy_in_total" type="number" min="0" value="${entry.buy_in_total}" aria-label="${escapeHtml(entry.player_name)} buy in">
+        <input data-entry="${entry.id}" data-field="buy_in_total" type="number" min="0" step="0.01" value="${entry.buy_in_total}" aria-label="${escapeHtml(entry.player_name)} buy in">
       </td>
       <td>
-        <input data-entry="${entry.id}" data-field="cash_out" type="number" min="0" value="${entry.cash_out}" aria-label="${escapeHtml(entry.player_name)} cash out">
+        <input data-entry="${entry.id}" data-field="cash_out" type="number" min="0" step="0.01" value="${entry.cash_out}" aria-label="${escapeHtml(entry.player_name)} cash out">
+      </td>
+      <td class="settle-cell">
+        <input data-settle-entry="${entry.id}" type="checkbox" ${entry.settled ? "checked" : ""} aria-label="${escapeHtml(entry.player_name)} settled">
       </td>
       <td class="money-cell ${klass}">${money(entry.profit)}</td>
       <td>
@@ -370,6 +374,23 @@ els.activeEntries.addEventListener("click", async (event) => {
 });
 
 els.activeEntries.addEventListener("change", async (event) => {
+  const settleCheckbox = event.target.closest("input[data-settle-entry]");
+  if (settleCheckbox) {
+    if (!state.activeGame) return;
+    try {
+      state.activeGame = await api(`/api/entries/${settleCheckbox.dataset.settleEntry}/settled`, {
+        method: "PATCH",
+        body: JSON.stringify({ settled: settleCheckbox.checked }),
+      });
+      await refreshAfterGameChange();
+      showToast(settleCheckbox.checked ? "Marked settled." : "Marked unsettled.");
+    } catch (error) {
+      settleCheckbox.checked = !settleCheckbox.checked;
+      showToast(error.message);
+    }
+    return;
+  }
+
   const input = event.target.closest("input[data-entry]");
   if (!input) return;
   try {

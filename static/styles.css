@@ -339,6 +339,9 @@ tr:last-child td {
 .ledger-list,
 .history-list {
   display: grid;
+  max-height: min(720px, calc(10 * 68px));
+  overflow-y: auto;
+  padding-right: 6px;
 }
 
 .ledger-row,

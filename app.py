@@ -406,6 +406,7 @@ def ledger():
         LEFT JOIN game_entries ge ON ge.player_id = p.id
         LEFT JOIN games g ON g.id = ge.game_id
         GROUP BY p.id
+        HAVING games_played >= 5
         ORDER BY total_profit DESC, lower(p.name)
         """
     ).fetchall()

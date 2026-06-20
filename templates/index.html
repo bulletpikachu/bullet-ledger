@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>bulletLedger</title>
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.png') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand-block">
+        <nav class="site-nav" aria-label="Ledger navigation">
+          <a href="#current-game">game</a>
+          <a href="#leaderboard">ledger</a>
+          <a href="#sessions">sessions</a>
+        </nav>
+        <h1>bulletLedger</h1>
+      </div>
+      <button id="refreshBtn" class="text-btn" title="Refresh ledger" aria-label="Refresh ledger">refresh</button>
+    </header>
+
+    <main class="app-shell">
+      <section id="current-game" class="workspace">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Current game</p>
+            <h2 id="gameTitle">Start a game</h2>
+          </div>
+          <span id="gameStatus" class="status-pill">No active game</span>
+        </div>
+
+        <form id="newGameForm" class="game-form">
+          <label>
+            Title
+            <input name="title" placeholder="Home Game" autocomplete="off">
+          </label>
+          <label>
+            Date
+            <input name="played_on" type="date">
+          </label>
+          <label>
+            Small blind
+            <input name="small_blind" type="number" min="0.01" step="0.01" value="0.10" required>
+          </label>
+          <label>
+            Big blind
+            <input name="big_blind" type="number" min="0.01" step="0.01" value="0.20" required>
+          </label>
+          <label>
+            Starting stack
+            <input name="starting_stack" type="number" min="1" step="0.01" value="20" required>
+          </label>
+          <button type="submit">Start game</button>
+        </form>
+
+        <div id="activeGamePanel" class="hidden">
+          <div class="game-meta" id="gameMeta"></div>
+
+          <form id="addPlayerForm" class="inline-form">
+            <select id="existingPlayerSelect" name="player_id">
+              <option value="">Add existing player...</option>
+            </select>
+            <input name="name" placeholder="or new player" autocomplete="off">
+            <button type="submit">Add player</button>
+          </form>
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Player</th>
+                  <th>In</th>
+                  <th>Out</th>
+                  <th>Profit</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="activeEntries"></tbody>
+            </table>
+          </div>
+
+          <div class="finish-row">
+            <p id="balanceNote"></p>
+            <button id="finishGameBtn" class="finish-btn" type="button">Finish</button>
+          </div>
+        </div>
+      </section>
+
+      <aside id="leaderboard" class="ledger-panel">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Leaderboard</p>
+          </div>
+        </div>
+        <div id="ledgerRows" class="ledger-list"></div>
+      </aside>
+
+      <section id="sessions" class="history-panel">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Saved sessions</p>
+          </div>
+        </div>
+        <div id="historyRows" class="history-list"></div>
+      </section>
+    </main>
+
+    <div id="toast" class="toast hidden" role="status"></div>
+    <script src="{{ url_for('static', filename='app.js') }}"></script>
+  </body>
+</html>
